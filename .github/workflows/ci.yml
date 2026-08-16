@@ -48,23 +48,36 @@ jobs:
       - run: npm run build:single
 
       # Driving the real release artifact over file:// is the closest thing to
-      # what somebody who downloads it will actually experience.
+      # what somebody who downloads it will actually experience. It can only
+      # cover what a player can reach unaided, though: the dev console helpers
+      # that let the script jump into a fight are stripped from a production
+      # build, so the deeper checks run against the dev server below.
       - name: Smoke test seikilos.html
         env:
           SMOKE_URL: file://${{ github.workspace }}/dist-release/seikilos.html
-          SMOKE_OUT: shots
+          SMOKE_OUT: shots/standalone
         run: npm run smoke
 
-      # Guards the HOTAS drift regression. Needs the dev server because it
-      # reads the player's position through the dev console helpers.
-      - name: Controller regression check
+      - name: Start dev server
         run: |
           npx vite --port 5173 --strictPort >/tmp/vite.log 2>&1 &
           for _ in $(seq 1 30); do
             curl -sf http://localhost:5173/ >/dev/null && break
             sleep 1
           done
-          npm run check:gamepad
+
+      # The full playthrough, including winning a battle and clearing the
+      # victory screen — the soft lock that shipped in v0.1.1 lived exactly
+      # there, in a state the production-only smoke run cannot reach.
+      - name: Full smoke test
+        env:
+          SMOKE_URL: http://localhost:5173/
+          SMOKE_OUT: shots/full
+        run: npm run smoke
+
+      # Guards the HOTAS drift regression.
+      - name: Controller regression check
+        run: npm run check:gamepad
 
       - if: always()
         uses: actions/upload-artifact@v4
