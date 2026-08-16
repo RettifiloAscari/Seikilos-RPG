@@ -8,6 +8,25 @@
 
 export type Drawable = HTMLImageElement | HTMLCanvasElement;
 
+/**
+ * The single-file build embeds every real asset as a data URI on this global,
+ * keyed by the same path the manifest uses. A page opened from `file://`
+ * cannot fetch sibling files, so without this the standalone HTML would
+ * silently fall back to placeholder art the moment real art existed.
+ */
+declare global {
+  interface Window {
+    __SEIKILOS_INLINE_ASSETS__?: Record<string, string>;
+  }
+}
+
+function inlineAsset(url: string): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  const inlined = window.__SEIKILOS_INLINE_ASSETS__;
+  if (!inlined) return undefined;
+  return inlined[url] ?? inlined[url.replace(/^\.?\//, '')];
+}
+
 export class Assets {
   private images = new Map<string, Drawable>();
   private sounds = new Map<string, HTMLAudioElement>();
@@ -22,11 +41,12 @@ export class Assets {
   }
 
   async loadImage(key: string, url: string): Promise<void> {
+    const source = inlineAsset(url) ?? url;
     const image = await new Promise<HTMLImageElement>((resolve, reject) => {
       const el = new Image();
       el.onload = () => resolve(el);
       el.onerror = () => reject(new Error(`Failed to load image "${key}" from ${url}`));
-      el.src = url;
+      el.src = source;
     });
     this.images.set(key, image);
   }

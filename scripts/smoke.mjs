@@ -58,10 +58,25 @@ const hold = async (code, ms) => {
   await wait(120);
 };
 
+function reportErrors() {
+  if (errors.length === 0) return;
+  console.error(`\n${errors.length} console error(s):`);
+  for (const error of errors.slice(0, 20)) console.error('  !', error);
+  process.exit(1);
+}
+
 console.log('booting', URL);
 await page.goto(URL, { waitUntil: 'networkidle' });
 await wait(1200);
 await shot('01-title');
+
+/**
+ * `window.dev` only exists in a dev build. Detecting it lets the same script
+ * run against a production bundle or the standalone file:// build, where the
+ * jump-straight-to-a-battle steps have to be skipped.
+ */
+const hasDev = await page.evaluate(() => typeof window.dev !== 'undefined');
+if (!hasDev) console.log('(production build: skipping dev-only battle jumps)');
 
 console.log('new game');
 await key('Enter');
@@ -85,6 +100,13 @@ await wait(300);
 await shot('05-menu-status');
 await key('x', 3, 200);
 await wait(300);
+
+if (!hasDev) {
+  await browser.close();
+  reportErrors();
+  console.log('\nproduction smoke passed (title, field, menus)');
+  process.exit(0);
+}
 
 console.log('battle');
 await page.evaluate(() => window.dev.battle('ruins.line'));
@@ -119,10 +141,5 @@ await wait(4500);
 await shot('12-boss');
 
 await browser.close();
-
-if (errors.length > 0) {
-  console.error(`\n${errors.length} console error(s):`);
-  for (const error of errors.slice(0, 20)) console.error('  !', error);
-  process.exit(1);
-}
+reportErrors();
 console.log('\nno console errors');

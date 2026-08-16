@@ -1,0 +1,95 @@
+name: Release
+
+# Attaches downloadable builds to a GitHub Release.
+#
+#   git tag v0.1.0 && git push origin v0.1.0
+#
+# or run this workflow manually and give it a tag name.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to create the release under (e.g. v0.1.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Verify before publishing
+        run: |
+          npm run typecheck
+          npm test
+
+      - name: Build
+        run: |
+          npm run build
+          npm run build:single
+
+      - name: Package the hostable build
+        run: cd dist && zip -qr ../dist-release/seikilos-web.zip . && cd ..
+
+      - name: Resolve tag
+        id: tag
+        run: echo "name=${{ inputs.tag || github.ref_name }}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.name }}
+        run: |
+          cat > notes.md <<'EOF'
+          A turn-based JRPG with a Chrono Trigger-style ATB battle system and combo Techs.
+
+          ## Play it
+
+          **No install:** open the [playable build](https://rettifiloascari.github.io/Seikilos-RPG/).
+
+          **Offline:** download `seikilos.html` below and open it in any browser.
+          It is one self-contained file — no server, no Node, nothing to install.
+
+          **Self-hosting:** `seikilos-web.zip` is the same build as static files.
+          Serve the folder over HTTP (the loose files need a server; the single
+          HTML file does not).
+
+          ## Controls
+
+          | Key | Action |
+          | --- | --- |
+          | Arrows / WASD | Move, navigate menus |
+          | Z / Enter / Space | Confirm |
+          | X / Esc | Cancel |
+          | C / Tab | Pause menu |
+          | Shift | Run |
+
+          A standard gamepad works too.
+
+          ## What to try
+
+          Head south out of the camp into the ruins. In battle, when two
+          characters' ATB gauges fill at the same time, the Tech menu gains a
+          combo entry that neither could use alone — waiting instead of acting
+          immediately is the whole mechanic.
+          EOF
+
+          gh release create "$TAG" \
+            --title "Seikilos $TAG" \
+            --notes-file notes.md \
+            dist-release/seikilos.html \
+            dist-release/seikilos-web.zip

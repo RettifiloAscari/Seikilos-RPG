@@ -7,7 +7,17 @@ three characters are ready at the same moment.
 Built in TypeScript on a plain HTML5 canvas — no engine, no runtime
 dependencies. Everything ships as static files.
 
-## Running it
+## Play it
+
+**In your browser, nothing to install** — [play the latest build](https://rettifiloascari.github.io/Seikilos-RPG/).
+
+**Offline** — grab `seikilos.html` from the [latest release](https://github.com/RettifiloAscari/Seikilos-RPG/releases/latest)
+and open it. It's one self-contained file: no server, no Node, no install. The
+whole game, art included, is about 100 KB.
+
+Both are built and published automatically by CI, so they track the branch.
+
+## Developing it
 
 ```bash
 npm install
@@ -18,10 +28,17 @@ npm run dev        # opens http://localhost:5173
 | --- | --- |
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Typecheck, then build to `dist/` |
+| `npm run build:single` | Build the standalone `dist-release/seikilos.html` |
 | `npm run preview` | Serve the production build |
-| `npm test` | Unit tests (combat formulas, map validation) |
+| `npm test` | Unit tests (combat formulas, content validation, asset pipeline) |
 | `npm run typecheck` | Types only |
-| `npm run smoke` | Play through the game in a real browser and screenshot it (needs `npm run dev` running) |
+| `npm run smoke` | Play through the game in a real browser and screenshot it |
+
+`npm run smoke` needs `npm run dev` running, or point it at any build:
+
+```bash
+SMOKE_URL=file://$PWD/dist-release/seikilos.html npm run smoke
+```
 
 ## Controls
 
@@ -145,6 +162,30 @@ precedence over imported entries.
 Downloaded archives are cached in `.assets-cache/` (gitignored). The sliced
 output in `public/assets/` is what gets committed, so a fresh clone needs no
 downloads.
+
+## Releasing
+
+CI does the work:
+
+- **Every push** — typecheck, tests, production build, and a browser smoke test
+  driven against the real standalone artifact over `file://`. Screenshots are
+  uploaded to the run.
+- **Push to the default branch** — deploys to GitHub Pages.
+  *(One-time setup: Settings → Pages → Source: **GitHub Actions**.)*
+- **Push a `v*` tag** — builds and publishes a Release with `seikilos.html` and
+  `seikilos-web.zip`.
+
+```bash
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+The `Release` workflow can also be run manually from the Actions tab if you'd
+rather not tag from the command line.
+
+Note that `seikilos-web.zip` is a folder of loose files and needs to be served
+over HTTP — browsers refuse to load ES modules from `file://`. That's exactly
+why `seikilos.html` exists: it's built as a single classic script with every
+asset embedded, so double-clicking it works.
 
 ## Dev console
 
