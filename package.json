@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "smoke": "node scripts/smoke.mjs",
+    "check:gamepad": "node scripts/gamepad-check.mjs",
     "assets:inspect": "node scripts/assets-inspect.mjs",
     "assets:import": "node scripts/assets-import.mjs",
     "assets:check": "node scripts/assets-import.mjs --check"

@@ -54,7 +54,18 @@ SMOKE_URL=file://$PWD/dist-release/seikilos.html npm run smoke
 | C / Tab | Pause menu |
 | Shift | Run |
 
-A standard gamepad works too.
+A standard gamepad works too — d-pad or left stick, A/B/X/Y.
+
+**Other USB devices are deliberately ignored.** Browsers report flight sticks,
+throttles, rudder pedals, wheels and button boxes through the same Gamepad API
+as controllers, and reading them as controllers goes badly: a throttle idles at
+-1.0 on its axis, which is indistinguishable from a thumbstick held hard over,
+so the player walks into a wall forever. Only devices reporting the standard
+gamepad mapping are read.
+
+If a controller misbehaves, **Pause → Options** has a gamepad on/off switch and
+an **Input diagnostics** screen listing every device the browser reports, why
+each one was used or ignored, and its live axis values.
 
 ## What's in the vertical slice
 

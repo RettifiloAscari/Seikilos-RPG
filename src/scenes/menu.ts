@@ -1,5 +1,6 @@
 import { VIRTUAL_H, VIRTUAL_W } from '../config';
 import type { Game } from '../core/game';
+import { explainRejection } from '../core/gamepad';
 import type { Scene } from '../core/scene';
 import { getItem } from '../data/items';
 import { getTech } from '../data/techs';
@@ -12,6 +13,8 @@ import { drawGauge, drawWindow, PANEL_STYLE } from '../ui/window';
 
 type Page =
   | { kind: 'root' }
+  | { kind: 'options' }
+  | { kind: 'inputDiagnostics' }
   | { kind: 'items' }
   | { kind: 'itemTarget'; itemId: string }
   | { kind: 'techs'; memberIndex: number }
@@ -65,6 +68,9 @@ export class PauseMenuScene implements Scene {
       case 'root':
         game.scenes.pop();
         return;
+      case 'inputDiagnostics':
+        this.openOptions(game);
+        return;
       case 'itemTarget':
         this.openItems(game);
         return;
@@ -84,6 +90,12 @@ export class PauseMenuScene implements Scene {
     switch (this.page.kind) {
       case 'root':
         this.confirmRoot(game);
+        return;
+      case 'options':
+        this.confirmOption(game);
+        return;
+      case 'inputDiagnostics':
+        this.openOptions(game);
         return;
       case 'items':
         this.confirmItem(game);
@@ -121,10 +133,11 @@ export class PauseMenuScene implements Scene {
         { label: 'Techs', value: 'techs' },
         { label: 'Status', value: 'status' },
         { label: 'Equip', value: 'equip' },
+        { label: 'Options', value: 'options' },
         { label: 'Save', value: 'save' },
         { label: 'Close', value: 'close' },
       ],
-      { visibleRows: 6, rowHeight: 14 },
+      { visibleRows: 7, rowHeight: 14 },
     );
   }
 
@@ -141,6 +154,9 @@ export class PauseMenuScene implements Scene {
         return;
       case 'equip':
         this.openEquipMember(game);
+        return;
+      case 'options':
+        this.openOptions(game);
         return;
       case 'save':
         this.openSave();
@@ -338,6 +354,67 @@ export class PauseMenuScene implements Scene {
     this.openEquipSlot(game, member);
   }
 
+  // --------------------------------------------------------------- options
+
+  private openOptions(game: Game): void {
+    this.page = { kind: 'options' };
+    const { gamepadEnabled, allowNonStandardGamepads } = game.settings;
+    const accepted = game.input.deviceDiagnostics().filter((device) => device.accepted).length;
+    const total = game.input.deviceDiagnostics().length;
+
+    this.menu = new ListMenu<string>(
+      [
+        {
+          label: 'Gamepad input',
+          detail: gamepadEnabled ? 'on' : 'off',
+          value: 'gamepad',
+        },
+        {
+          label: 'Trust unusual devices',
+          detail: allowNonStandardGamepads ? 'on' : 'off',
+          // Only meaningful while gamepads are being read at all.
+          disabled: !gamepadEnabled,
+          value: 'nonstandard',
+        },
+        {
+          label: 'Input diagnostics',
+          detail: total > 0 ? `${accepted}/${total} used` : 'no devices',
+          value: 'diagnostics',
+        },
+        { label: 'Back', value: 'back' },
+      ],
+      { visibleRows: 4, rowHeight: 14 },
+    );
+  }
+
+  private confirmOption(game: Game): void {
+    switch (this.menu.selectedValue) {
+      case 'gamepad': {
+        const enabled = !game.settings.gamepadEnabled;
+        game.updateSettings({ gamepadEnabled: enabled });
+        this.showNotice(enabled ? 'Gamepad input on.' : 'Gamepad input off. Keyboard still works.');
+        this.openOptions(game);
+        return;
+      }
+      case 'nonstandard': {
+        const allow = !game.settings.allowNonStandardGamepads;
+        game.updateSettings({ allowNonStandardGamepads: allow });
+        this.showNotice(
+          allow ? 'Reading unusual devices. Expect drift.' : 'Only standard gamepads are read.',
+        );
+        this.openOptions(game);
+        return;
+      }
+      case 'diagnostics':
+        this.page = { kind: 'inputDiagnostics' };
+        this.menu = new ListMenu([{ label: 'Back', value: 'back' }], { visibleRows: 1, rowHeight: 14 });
+        return;
+      case 'back':
+        this.openRoot();
+        return;
+    }
+  }
+
   // ------------------------------------------------------------------ save
 
   private openSave(): void {
@@ -423,6 +500,11 @@ export class PauseMenuScene implements Scene {
     const width = VIRTUAL_W - x - 4;
 
     switch (this.page.kind) {
+      case 'inputDiagnostics': {
+        this.renderInputDiagnostics(r, game, x, 4, width);
+        return;
+      }
+
       case 'status': {
         const member = game.state.roster[this.page.memberIndex];
         if (member) this.renderStatus(r, game, member, x, 4, width);
@@ -487,6 +569,65 @@ export class PauseMenuScene implements Scene {
       default:
         return '';
     }
+  }
+
+  /**
+   * Live view of every controller the browser is reporting, whether or not the
+   * game is listening to it.
+   *
+   * This exists because controller problems are almost impossible to diagnose
+   * from a description: "my stick makes it walk left" could be a dozen things.
+   * Seeing the device's name, its mapping, its live axis values and which axes
+   * are being ignored turns that into a five-second answer.
+   */
+  private renderInputDiagnostics(r: Renderer, game: Game, x: number, y: number, width: number): void {
+    drawWindow(r, x, y, width, 170);
+    game.font.drawShadowed(r.ctx, 'Input diagnostics', x + 10, y + 8, '#ffe9a8');
+
+    const devices = game.input.deviceDiagnostics();
+
+    if (devices.length === 0) {
+      game.fontSmall.draw(r.ctx, 'No controllers detected.', x + 10, y + 26, '#b9c4e8');
+      game.fontSmall.draw(r.ctx, 'Press a button on a pad to wake it up —', x + 10, y + 38, '#8f88a8');
+      game.fontSmall.draw(r.ctx, 'browsers hide gamepads until they are used.', x + 10, y + 48, '#8f88a8');
+      this.menu.render(r, game.font, x + width - 58, y + 150, 50);
+      return;
+    }
+
+    let rowY = y + 24;
+    for (const device of devices) {
+      if (rowY > y + 140) break;
+
+      const color = device.accepted ? '#7ee08a' : '#e0a080';
+      const status = device.accepted ? 'USED' : 'IGNORED';
+      game.fontSmall.draw(r.ctx, status, x + 10, rowY, color);
+      // Device names are long and vendor-formatted; clip rather than wrap.
+      game.fontSmall.draw(r.ctx, truncate(device.id, 26), x + 58, rowY, '#ffffff');
+      rowY += 10;
+
+      const detail = device.reason ? explainRejection(device.reason) : `mapping: ${device.mapping}`;
+      game.fontSmall.draw(r.ctx, detail, x + 16, rowY, '#8f88a8');
+      rowY += 10;
+
+      // Live axis values make a parked throttle obvious at a glance.
+      const axes = device.axes
+        .slice(0, 6)
+        .map((value, index) => `${index}:${value.toFixed(2)}${device.stuckAxes.includes(index) ? '*' : ''}`)
+        .join(' ');
+      if (axes) {
+        game.fontSmall.draw(r.ctx, axes, x + 16, rowY, '#b9c4e8');
+        rowY += 10;
+      }
+
+      if (device.pressed.length > 0) {
+        game.fontSmall.draw(r.ctx, `buttons: ${device.pressed.join(', ')}`, x + 16, rowY, '#ffe066');
+        rowY += 10;
+      }
+      rowY += 4;
+    }
+
+    game.fontSmall.draw(r.ctx, '* = axis ignored, never moved', x + 10, y + 148, '#6b6482');
+    this.menu.render(r, game.font, x + width - 58, y + 150, 50);
   }
 
   private renderStatus(r: Renderer, game: Game, member: PartyMember, x: number, y: number, width: number): void {
@@ -593,4 +734,8 @@ export class PauseMenuScene implements Scene {
 
 function capitalise(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function truncate(text: string, max: number): string {
+  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
 }

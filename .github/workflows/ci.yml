@@ -55,6 +55,17 @@ jobs:
           SMOKE_OUT: shots
         run: npm run smoke
 
+      # Guards the HOTAS drift regression. Needs the dev server because it
+      # reads the player's position through the dev console helpers.
+      - name: Controller regression check
+        run: |
+          npx vite --port 5173 --strictPort >/tmp/vite.log 2>&1 &
+          for _ in $(seq 1 30); do
+            curl -sf http://localhost:5173/ >/dev/null && break
+            sleep 1
+          done
+          npm run check:gamepad
+
       - if: always()
         uses: actions/upload-artifact@v4
         with:

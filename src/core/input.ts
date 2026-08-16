@@ -5,19 +5,10 @@
  * rebinding and gamepad support in one place.
  */
 
-export const BUTTONS = [
-  'up',
-  'down',
-  'left',
-  'right',
-  'confirm',
-  'cancel',
-  'menu',
-  'run',
-  'start',
-] as const;
+import { BUTTONS, type Button } from './buttons';
+import { GamepadReader, pollNavigatorGamepads, type DeviceReport } from './gamepad';
 
-export type Button = (typeof BUTTONS)[number];
+export { BUTTONS, type Button };
 
 /** Physical key -> logical button. Multiple keys may map to one button. */
 export const DEFAULT_KEYMAP: Readonly<Record<string, Button>> = {
@@ -47,22 +38,8 @@ export const DEFAULT_KEYMAP: Readonly<Record<string, Button>> = {
   KeyP: 'start',
 };
 
-/** Standard-gamepad button index -> logical button. */
-const GAMEPAD_MAP: Readonly<Record<number, Button>> = {
-  0: 'confirm', // A / cross
-  1: 'cancel', // B / circle
-  2: 'menu', // X / square
-  3: 'run', // Y / triangle
-  9: 'start',
-  12: 'up',
-  13: 'down',
-  14: 'left',
-  15: 'right',
-};
-
 const REPEAT_DELAY = 0.26;
 const REPEAT_INTERVAL = 0.07;
-const STICK_DEADZONE = 0.45;
 
 export class Input {
   private keymap: Record<string, Button> = { ...DEFAULT_KEYMAP };
@@ -84,6 +61,11 @@ export class Input {
   private repeated = new Set<Button>();
   private repeatTimer = new Map<Button, number>();
   private detached: (() => void) | null = null;
+
+  /** Owns which controllers are trusted and how their axes are read. */
+  readonly gamepads = new GamepadReader();
+  /** Last poll's per-device report, for the input diagnostics screen. */
+  private deviceReports: DeviceReport[] = [];
 
   attach(target: HTMLElement | Window = window): void {
     const onKeyDown = (e: Event) => {
@@ -107,15 +89,44 @@ export class Input {
     // If the window loses focus we never get the keyup, so clear everything.
     const onBlur = () => this.held.clear();
 
+    // Re-plugging a controller should recalibrate it from scratch rather than
+    // inherit whatever the previous device at that index was doing.
+    const onGamepadChange = (e: Event) => {
+      const index = (e as GamepadEvent).gamepad?.index;
+      this.gamepads.forget(index);
+      this.pad.clear();
+      this.padPrev.clear();
+    };
+
     target.addEventListener('keydown', onKeyDown);
     target.addEventListener('keyup', onKeyUp);
     window.addEventListener('blur', onBlur);
+    window.addEventListener('gamepadconnected', onGamepadChange);
+    window.addEventListener('gamepaddisconnected', onGamepadChange);
 
     this.detached = () => {
       target.removeEventListener('keydown', onKeyDown);
       target.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
+      window.removeEventListener('gamepadconnected', onGamepadChange);
+      window.removeEventListener('gamepaddisconnected', onGamepadChange);
     };
+  }
+
+  /** Turn controller input off entirely. Keyboard is unaffected. */
+  setGamepadEnabled(enabled: boolean): void {
+    this.gamepads.enabled = enabled;
+    this.pad.clear();
+    this.padPrev.clear();
+  }
+
+  get gamepadEnabled(): boolean {
+    return this.gamepads.enabled;
+  }
+
+  /** Every device seen on the last poll, accepted or not. */
+  deviceDiagnostics(): readonly DeviceReport[] {
+    return this.deviceReports;
   }
 
   detach(): void {
@@ -217,24 +228,9 @@ export class Input {
   }
 
   private pollGamepad(): void {
-    this.pad.clear();
-    if (typeof navigator === 'undefined' || !navigator.getGamepads) return;
-
-    for (const gp of navigator.getGamepads()) {
-      if (!gp) continue;
-
-      gp.buttons.forEach((btn, index) => {
-        if (!btn.pressed) return;
-        const mapped = GAMEPAD_MAP[index];
-        if (mapped) this.pad.add(mapped);
-      });
-
-      const [ax = 0, ay = 0] = gp.axes;
-      if (ax < -STICK_DEADZONE) this.pad.add('left');
-      if (ax > STICK_DEADZONE) this.pad.add('right');
-      if (ay < -STICK_DEADZONE) this.pad.add('up');
-      if (ay > STICK_DEADZONE) this.pad.add('down');
-    }
+    const { buttons, devices } = this.gamepads.read(pollNavigatorGamepads());
+    this.pad = buttons;
+    this.deviceReports = devices;
 
     // The pad is polled, not event-driven, so derive its edges here and feed
     // them into the same buffers the keyboard uses.

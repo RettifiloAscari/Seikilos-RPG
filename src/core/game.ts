@@ -7,6 +7,7 @@ import { Rng } from './rng';
 import { SceneStack, type Scene } from './scene';
 import type { SaveData } from '../state/savegame';
 import { GameState } from '../state/gamestate';
+import { loadSettings, saveSettings, type Settings } from '../state/settings';
 
 /**
  * Owns the render target, input, assets and the scene stack, and drives the
@@ -24,6 +25,9 @@ export class Game {
 
   /** Party, inventory, story flags: everything that belongs in a save file. */
   state = new GameState();
+
+  /** Player preferences, persisted separately from saves. */
+  settings: Settings = loadSettings();
 
   /** Main UI font. Assigned during `boot`. */
   font!: BitmapFont;
@@ -49,6 +53,19 @@ export class Game {
     this.font = BitmapFont.generate({ size: 11 });
     this.fontSmall = BitmapFont.generate({ size: 9, bold: true });
     this.input.attach(window);
+    this.applySettings();
+  }
+
+  /** Push the current settings into the systems that read them. */
+  applySettings(): void {
+    this.input.setGamepadEnabled(this.settings.gamepadEnabled);
+    this.input.gamepads.allowNonStandard = this.settings.allowNonStandardGamepads;
+  }
+
+  updateSettings(changes: Partial<Settings>): void {
+    this.settings = { ...this.settings, ...changes };
+    this.applySettings();
+    saveSettings(this.settings);
   }
 
   start(initial: Scene): void {

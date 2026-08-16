@@ -46,6 +46,12 @@ a panel that has drifted on top of another.
   1/60s frame must still register, so `pressed()` reads a buffer filled by DOM
   events rather than comparing held-state between ticks. Don't "simplify" it
   back to state comparison.
+- **The Gamepad API reports things that are not gamepads.** Flight sticks,
+  throttles, pedals and wheels all arrive through `navigator.getGamepads()`. A
+  throttle idles at -1.0, which reads as a stick held hard over, and button
+  indices only mean A/B/d-pad when `mapping === 'standard'`. `GamepadReader`
+  only trusts standard-mapping devices, and disbelieves axes that have never
+  moved. Don't widen that without running `npm run check:gamepad`.
 - **The scene stack mutates deferred.** `push`/`pop` during `update` queue up and
   apply after, so a scene can safely change the stack from inside itself.
 - **Battle UI must stay clear of the HUD** along the bottom (y ≥ 158) and of the
