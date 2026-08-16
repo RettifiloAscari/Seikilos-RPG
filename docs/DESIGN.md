@@ -88,8 +88,16 @@ game is *about* music. Needs an audio manager, a handful of CC0 effects
 (hit, heal, menu move, menu confirm, victory) and two or three tracks. Note the
 browser autoplay policy: audio can't start until the player interacts.
 
-**2. Real art.** The pipeline is ready (`src/art/index.ts`). Kenney *Tiny Town*
-and *Tiny Dungeon* are CC0 16×16 and drop straight in.
+**2. Real art.** The importer is built and tested (`npm run assets:inspect` /
+`assets:import`). Kenney *Tiny Town* and *Tiny Dungeon* are CC0 16×16 and fit
+the current tile size directly. The remaining work is the genuinely human part:
+reading cell indices off a contact sheet into `assets.config.mjs`.
+
+A note on tooling, since it comes up: an MCP server would not have helped with
+the import. Import is bulk, one-time and needs to be reproducible in CI, and
+the expensive part is slicing and index-mapping rather than fetching. Discovery
+across a large CC0 corpus *is* MCP-shaped, and worth revisiting if picking
+assets ever becomes a recurring task rather than a handful of one-off choices.
 
 **3. More combos.** The system supports far more than the four that exist. Every
 new pair is cheap content with high impact. Combos gated behind story beats are

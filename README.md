@@ -98,21 +98,53 @@ mistakes surface as test failures rather than a blank screen.
 
 ## Art
 
-The game currently generates all its art procedurally at boot
-(`src/art/placeholder.ts`) so it runs with zero downloads. Real artwork drops in
-through `src/art/index.ts`: put a PNG in `public/assets/`, add one line to
-`ART_MANIFEST` under the matching key, and it overrides the placeholder. No
-gameplay code changes.
+The game generates all its art procedurally at boot (`src/art/placeholder.ts`)
+so it runs with zero downloads. Real artwork comes in through the importer.
 
-Expected formats are documented at the top of `src/art/index.ts`. The layouts
-match how Kenney and LPC sheets are organised.
+### Importing a CC0 pack
 
-Good CC0 sources:
+| Command | What it does |
+| --- | --- |
+| `npm run assets:inspect -- --pack <id> --from <zip>` | Lists every PNG in the pack with its dimensions and cell grids, and writes **numbered contact sheets** to `shots/contact/` |
+| `npm run assets:import` | Slices, remaps and writes `public/assets/`, plus the art manifest and `CREDITS.md` |
+| `npm run assets:check` | Validates `assets.config.mjs` without writing anything |
+
+The workflow:
+
+1. Add the pack to `assets.config.mjs` (a homepage is enough; a URL is optional).
+2. Run `assets:inspect`. Open the contact sheet — every cell is numbered.
+3. Write those numbers into an output entry: `{ GRASS: 0, WALL: 60, ... }`.
+4. Run `assets:import`.
+
+Why it works this way: a pack ships tiles in whatever order its author chose,
+and the engine wants them at specific semantic indices. Choosing *which* cell is
+grass needs human eyes; everything after that is mechanical, so the importer
+does it deterministically — same inputs, same bytes, so a re-import is an empty
+diff unless something really changed.
+
+Safety rails, because a shifted tile index silently rewrites every map:
+
+- Tile **names** are parsed out of the `TILES` enum in the engine, so a typo or
+  a drifted mapping fails the import instead of producing the wrong tile.
+- Packs are **checksum-pinned** on first import; if upstream re-uploads a
+  changed file, the import refuses rather than quietly remapping your world.
+- Unmapped tiles come out **transparent** — a visible hole, not a wrong sprite.
+- Anything not imported keeps its procedural placeholder, so a pack can be
+  mapped a few tiles at a time.
+
+Hand-written one-offs still go in `ART_MANIFEST` in `src/art/index.ts`, and take
+precedence over imported entries.
+
+### Where to get packs
 
 - [Kenney](https://kenney.nl/assets) — CC0, no attribution required. *Tiny Town*
   and *Tiny Dungeon* are 16×16 and fit the current tile size directly.
 - [OpenGameArt](https://opengameart.org) — filter by CC0. The LPC character
   sets are the standard choice for walk cycles.
+
+Downloaded archives are cached in `.assets-cache/` (gitignored). The sliced
+output in `public/assets/` is what gets committed, so a fresh clone needs no
+downloads.
 
 ## Dev console
 

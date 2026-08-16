@@ -11,10 +11,15 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "assets:inspect": "node scripts/assets-inspect.mjs",
+    "assets:import": "node scripts/assets-import.mjs",
+    "assets:check": "node scripts/assets-import.mjs --check"
   },
   "devDependencies": {
+    "fflate": "^0.8.3",
     "playwright": "^1.62.1",
+    "pngjs": "^7.0.0",
     "typescript": "^5.9.3",
     "vite": "^7.1.9",
     "vitest": "^3.2.4"

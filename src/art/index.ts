@@ -1,13 +1,13 @@
 import type { Assets } from '../core/assets';
+import { GENERATED_MANIFEST } from './manifest.generated';
 import { generatePlaceholderArt } from './placeholder';
 
 /**
- * Real artwork, keyed the same way as the generated placeholders.
+ * Hand-written art overrides, keyed the same way as the generated placeholders.
  *
- * Anything listed here overrides its placeholder. Drop a PNG into
- * `public/assets/` and add a line — that is the whole swap. Entries that fail
- * to load are logged and fall back to the placeholder, so a missing file never
- * breaks the build or the game.
+ * Most real art should arrive through `npm run assets:import`, which writes
+ * `manifest.generated.ts`. Use this file for one-off pieces that aren't sliced
+ * out of a pack — a bespoke title screen, a boss nobody else drew.
  *
  * Expected formats:
  *   tileset.*        16x16 tiles, 8 columns, indices matching `TILES`
@@ -17,17 +17,25 @@ import { generatePlaceholderArt } from './placeholder';
  *   battlebg.*       384x216
  */
 export const ART_MANIFEST: Record<string, string> = {
-  // 'tileset.ruins': 'assets/tileset-ruins.png',
-  // 'actor.kairos.field': 'assets/kairos-walk.png',
+  // 'battlebg.sanctum': 'assets/sanctum.png',
 };
+
+/**
+ * Hand-written entries win over imported ones, so overriding a single sliced
+ * tile sheet doesn't mean abandoning the importer for everything else.
+ */
+export function resolveManifest(): Record<string, string> {
+  return { ...GENERATED_MANIFEST, ...ART_MANIFEST };
+}
 
 export async function loadArt(assets: Assets): Promise<void> {
   // Placeholders first, so every key is always populated.
   generatePlaceholderArt(assets);
 
-  if (Object.keys(ART_MANIFEST).length === 0) return;
+  const manifest = resolveManifest();
+  if (Object.keys(manifest).length === 0) return;
 
-  const failures = await assets.loadImagesOptional(ART_MANIFEST);
+  const failures = await assets.loadImagesOptional(manifest);
   if (failures.length > 0) {
     console.warn(`[art] using placeholders for: ${failures.join(', ')}`);
   }

@@ -9,10 +9,11 @@ for layout and controls.
 ## Checks
 
 ```bash
-npm run typecheck   # must pass
-npm test            # combat formulas + map validation
-npm run build       # typecheck + production build
-npm run smoke       # browser playthrough with screenshots (needs `npm run dev` running)
+npm run typecheck     # must pass
+npm test              # combat formulas, content validation, asset pipeline
+npm run build         # typecheck + production build
+npm run smoke         # browser playthrough with screenshots (needs `npm run dev` running)
+npm run assets:check  # validate assets.config.mjs
 ```
 
 Run `typecheck` and `test` before committing. Run `smoke` after touching input,
@@ -32,6 +33,9 @@ a panel that has drifted on top of another.
 - **Assets are looked up by stable string key** (`actor.kairos.battle`). Real
   art overrides a placeholder by registering under the same key; no gameplay
   code should ever reference a file path.
+- **`src/art/manifest.generated.ts` is generated.** Edit `assets.config.mjs` and
+  re-run `npm run assets:import`; hand edits are overwritten. One-off art that
+  isn't sliced from a pack goes in `ART_MANIFEST` in `src/art/index.ts`.
 - Fixed 60Hz logic tick. Never scale gameplay by frame time outside the tick.
 - Virtual resolution is 384×216, scaled by an integer factor. Draw in virtual
   pixels and round positions; sub-pixel sprites shimmer.

@@ -6,6 +6,10 @@ dist-ssr/
 .vite/
 coverage/
 shots/
+
+# Downloaded art packs. Reproducible from assets.config.mjs; the sliced output
+# in public/assets/ is what gets committed.
+.assets-cache/
 *.log
 .env
 .env.*
