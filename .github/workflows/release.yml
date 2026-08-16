@@ -59,14 +59,15 @@ jobs:
 
           ## Play it
 
-          **No install:** open the [playable build](https://rettifiloascari.github.io/Seikilos-RPG/).
-
-          **Offline:** download `seikilos.html` below and open it in any browser.
-          It is one self-contained file — no server, no Node, nothing to install.
+          **Download `seikilos.html` below and open it in any browser.** One
+          self-contained file — no server, no Node, nothing to install.
 
           **Self-hosting:** `seikilos-web.zip` is the same build as static files.
           Serve the folder over HTTP (the loose files need a server; the single
           HTML file does not).
+
+          **In-browser:** if GitHub Pages is enabled for this repository, the
+          latest build is also at https://rettifiloascari.github.io/Seikilos-RPG/
 
           ## Controls
 

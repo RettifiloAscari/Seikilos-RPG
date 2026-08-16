@@ -3,10 +3,13 @@ name: Deploy playable build
 # Publishes the game to GitHub Pages so it can be played from a link, with no
 # clone and no install.
 #
-# `enablement: true` below asks the API to turn Pages on, so no manual setup
-# should be needed. If the run still fails on "Get Pages site failed", the
-# token was not allowed to enable it — switch it on by hand under
-# Settings -> Pages -> Source: GitHub Actions, and re-run.
+# ONE-TIME SETUP: Settings -> Pages -> Source: GitHub Actions.
+#
+# This cannot be automated. `configure-pages` has an `enablement` input, but
+# the default GITHUB_TOKEN is not permitted to create a Pages site ("Resource
+# not accessible by integration"), so it fails with a less obvious error than
+# the one you get by leaving it off. Until Pages is switched on by hand this
+# workflow will fail on "Get Pages site failed", which says what to do.
 
 on:
   push:
@@ -43,8 +46,6 @@ jobs:
       - run: npm run build
 
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:

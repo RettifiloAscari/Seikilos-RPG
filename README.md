@@ -9,13 +9,17 @@ dependencies. Everything ships as static files.
 
 ## Play it
 
-**In your browser, nothing to install** — [play the latest build](https://rettifiloascari.github.io/Seikilos-RPG/).
+**Download and run** — grab `seikilos.html` from the
+[latest release](https://github.com/RettifiloAscari/Seikilos-RPG/releases/latest)
+and open it. One self-contained file: no server, no Node, no install. The whole
+game, art included, is about 100 KB.
 
-**Offline** — grab `seikilos.html` from the [latest release](https://github.com/RettifiloAscari/Seikilos-RPG/releases/latest)
-and open it. It's one self-contained file: no server, no Node, no install. The
-whole game, art included, is about 100 KB.
+**In your browser** — [play the latest build](https://rettifiloascari.github.io/Seikilos-RPG/),
+once GitHub Pages has been enabled for the repo (Settings → Pages → Source:
+**GitHub Actions**). That's a one-time click; it can't be automated, because the
+Actions token isn't allowed to create a Pages site.
 
-Both are built and published automatically by CI, so they track the branch.
+Both are built and published by CI, so they track the branch.
 
 ## Developing it
 
