@@ -45,6 +45,14 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+      # Ship the offline build alongside the hosted one, so there is always a
+      # current download at a stable URL without having to cut a release:
+      #   <pages-url>/seikilos.html
+      - name: Include the standalone download
+        run: |
+          npm run build:single
+          cp dist-release/seikilos.html dist/seikilos.html
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3

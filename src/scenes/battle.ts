@@ -126,6 +126,10 @@ export class BattleScene implements Scene {
 
     if (this.battle.phase === 'finished') {
       this.handleFinish(game);
+      // The victory screen is a normal interactive state and still needs its
+      // input read. Returning here instead is what soft-locked every win:
+      // the "press confirm" prompt was drawn by a branch that never ran.
+      if (this.ui.kind === 'results') this.updateUi(dt, game);
       return;
     }
 

@@ -9,17 +9,16 @@ dependencies. Everything ships as static files.
 
 ## Play it
 
-**Download and run** — grab `seikilos.html` from the
-[latest release](https://github.com/RettifiloAscari/Seikilos-RPG/releases/latest)
-and open it. One self-contained file: no server, no Node, no install. The whole
-game, art included, is about 100 KB.
+**In your browser** — [play the latest build](https://rettifiloascari.github.io/Seikilos-RPG/).
+Rebuilt and deployed on every push, so it is always current.
 
-**In your browser** — [play the latest build](https://rettifiloascari.github.io/Seikilos-RPG/),
-once GitHub Pages has been enabled for the repo (Settings → Pages → Source:
-**GitHub Actions**). That's a one-time click; it can't be automated, because the
-Actions token isn't allowed to create a Pages site.
+**Offline** — [download seikilos.html](https://rettifiloascari.github.io/Seikilos-RPG/seikilos.html)
+and open it. One self-contained file: no server, no Node, no install. Also
+tracks every push. The whole game, art included, is about 110 KB.
 
-Both are built and published by CI, so they track the branch.
+**Milestones** — the [releases page](https://github.com/RettifiloAscari/Seikilos-RPG/releases)
+has tagged builds worth keeping or rolling back to. Day-to-day changes go to the
+two links above rather than into a release.
 
 ## Developing it
 
@@ -178,24 +177,29 @@ Downloaded archives are cached in `.assets-cache/` (gitignored). The sliced
 output in `public/assets/` is what gets committed, so a fresh clone needs no
 downloads.
 
-## Releasing
+## Shipping
 
 CI does the work:
 
 - **Every push** — typecheck, tests, production build, and a browser smoke test
-  driven against the real standalone artifact over `file://`. Screenshots are
-  uploaded to the run.
-- **Push to the default branch** — deploys to GitHub Pages.
-  *(One-time setup: Settings → Pages → Source: **GitHub Actions**.)*
-- **Push a `v*` tag** — builds and publishes a Release with `seikilos.html` and
+  driven against the real standalone artifact over `file://`, plus the
+  controller regression check. Screenshots are uploaded to the run.
+- **Push to the default branch** — deploys to GitHub Pages: both the hosted
+  game and `seikilos.html` for offline play.
+- **Push a `v*` tag** — publishes a Release with `seikilos.html` and
   `seikilos-web.zip`.
 
+Because Pages carries every push, releases are for **milestones only**: a build
+worth naming, keeping, or rolling back to. Tag one when something substantial
+lands, or when a shipped release has a bug bad enough that people should stop
+using it.
+
 ```bash
-git tag v0.1.0 && git push origin v0.1.0
+git tag v0.2.0 && git push origin v0.2.0
 ```
 
-The `Release` workflow can also be run manually from the Actions tab if you'd
-rather not tag from the command line.
+The `Release` workflow can also be run manually from the Actions tab with a tag
+name, which is the easier path if tag pushes are awkward from your environment.
 
 Note that `seikilos-web.zip` is a folder of loose files and needs to be served
 over HTTP — browsers refuse to load ES modules from `file://`. That's exactly

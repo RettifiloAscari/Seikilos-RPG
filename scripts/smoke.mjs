@@ -140,6 +140,49 @@ await page.evaluate(() => window.dev.battle('boss.choragos'));
 await wait(4500);
 await shot('12-boss');
 
+/**
+ * Win a fight and leave the victory screen.
+ *
+ * This exists because a soft-lock shipped: the results window drew a "press
+ * confirm" prompt, but the branch reading that input never ran, so every won
+ * battle trapped the player. Entering a battle was covered; *finishing* one
+ * was not.
+ *
+ * Depth is compared against the stack before the fight rather than against 1,
+ * because `dev.battle` pushes onto whatever is already open.
+ */
+console.log('win a battle and clear the results screen');
+await page.evaluate(() => {
+  window.dev.level(25); // overwhelming, so the fight ends quickly
+  window.dev.heal();
+});
+await wait(300);
+
+const depthBefore = await page.evaluate(() => window.game.scenes.depth);
+await page.evaluate(() => window.dev.battle('ruins.wisps'));
+await wait(2000);
+
+// Mash confirm: picks Attack, picks a target, and finally clears the results
+// window. If the victory screen ignores input, this never escapes.
+let escaped = false;
+for (let i = 0; i < 40; i++) {
+  await page.keyboard.press('z');
+  await wait(250);
+  if (await page.evaluate((d) => window.game.scenes.depth <= d, depthBefore)) {
+    escaped = true;
+    break;
+  }
+}
+await wait(600);
+await shot('13-after-victory');
+
+if (!escaped) {
+  console.error('  FAIL: still stuck in the battle scene after winning');
+  errors.push('victory screen did not dismiss — soft lock');
+} else {
+  console.log('  ok: victory screen dismissed and the battle scene closed');
+}
+
 await browser.close();
 reportErrors();
 console.log('\nno console errors');
